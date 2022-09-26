@@ -3,6 +3,7 @@ from queue import Empty
 from sqlite3 import DatabaseError
 from sre_constants import SUCCESS
 from fastapi import FastAPI, File, UploadFile, Depends, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 import uuid
 from auth import AuthHandler
 from models import AuthDetails, User
@@ -11,6 +12,18 @@ from models import AuthDetails, User
 from db import Database
 
 app = FastAPI()
+
+app = FastAPI()
+
+origins = ["*"]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 auth_handler = AuthHandler()
 users = []
 
@@ -34,7 +47,7 @@ users = []
 #       connection.close()
 #       print('Database connection terminated')
 
-@app.post("/api/v1/register", status_code=201)
+@app.post("/api/v1/auth/register", status_code=201)
 async def register(user_details: User):
   # print(Database.query('SELECT * from "FaceRecog".users'))
   regist_users = []
@@ -51,17 +64,8 @@ async def register(user_details: User):
     return {"msg": 'User created'}
   else:
     raise HTTPException(status_code=401, detail=f"Username '{regist_users[0][3]}' is already taken")
-    
-  # if any(x['username'] == auth_details.username for x in users):
-  #   raise HTTPException(status_code=400, detail='Username is already taken')
-  
-  # users.append({
-  #   'username': auth_details.username,
-  #   'password': hashed_password
-  # })
-  return
 
-@app.post("/api/v1/login")
+@app.post("/api/v1/auth/login")
 async def login(auth_details: AuthDetails):
   user = None
   user = Database.query(
@@ -73,12 +77,23 @@ async def login(auth_details: AuthDetails):
     if auth_handler.verify_password(auth_details.password, user[4]):
       print("second if")
       token = auth_handler.encode_token(user[0])
-      return {'token': token}
+      return {
+        "username": auth_details.username,
+        "accessToken": token
+      }
       
     else:
       raise HTTPException(
       status_code=401, detail='Invalid username and/or password')
   
+
+@app.get("/api/v1/auth/valid-token")
+async def get_user(user_id = Depends(auth_handler.auth_wrapper)):
+  if user_id is not Empty:
+    raise HTTPException(status_code=200, detail="User is logged")
+  # user = Database.query(
+  #     f"SELECT * from \"FaceRecog\".users where users.username='{username}'")
+
 
 @app.get("/")
 async def root():
