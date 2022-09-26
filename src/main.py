@@ -6,10 +6,12 @@ from fastapi import FastAPI, File, UploadFile, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 import uuid
 from auth import AuthHandler
+from face_recog import FaceRecog
 from models import AuthDetails, User
 # import psycopg2
 # from config import config
 from db import Database
+import os
 
 app = FastAPI()
 
@@ -47,6 +49,9 @@ users = []
 #       connection.close()
 #       print('Database connection terminated')
 
+
+
+
 @app.post("/api/v1/auth/register", status_code=201)
 async def register(user_details: User):
   # print(Database.query('SELECT * from "FaceRecog".users'))
@@ -76,7 +81,7 @@ async def login(auth_details: AuthDetails):
     user = user[0]
     if auth_handler.verify_password(auth_details.password, user[4]):
       print("second if")
-      token = auth_handler.encode_token(user[0])
+      token = auth_handler.encode_token(user[3])
       return {
         "username": auth_details.username,
         "accessToken": token
@@ -88,8 +93,8 @@ async def login(auth_details: AuthDetails):
   
 
 @app.get("/api/v1/auth/valid-token")
-async def get_user(user_id = Depends(auth_handler.auth_wrapper)):
-  if user_id is not Empty:
+async def get_user(username = Depends(auth_handler.auth_wrapper)):
+  if username is not Empty:
     raise HTTPException(status_code=200, detail="User is logged")
   # user = Database.query(
   #     f"SELECT * from \"FaceRecog\".users where users.username='{username}'")
@@ -100,10 +105,21 @@ async def root():
   return ({"message": "Welcome on the Python server"})
 
 @app.post("/api/v1/users/images/check")
-async def check_image(file: UploadFile = File(...)):
+async def check_image(file: bytes = File(...)):
+  myuuid = uuid.uuid4()
   #img.filename = "check.jpg"
   #contents = await file.read()
-  return {"filename": file}
+  with open('../assets/temp/check.jpg', "wb") as image:
+    image.write(file)
+    image.close()
+  result = FaceRecog.compare_faces('../assets/temp/check.jpg')
+  return_result = None
+  if result[0] == True:
+    return_result = True
+  else:
+    return_result = False
+
+  return {"result": return_result}
 
 @app.post("/api/v1/users/images/upload")
 # async def upload_image(file: bytes = File(...), username = Depends(auth_handler.auth_wrapper)):
@@ -118,7 +134,8 @@ async def upload_image(file: bytes = File(...), username=Depends(auth_handler.au
   myuuid = uuid.uuid4()
   #img.filename = "check.jpg"
   #contents = await file.read()
-  with open('../assets/'+str(myuuid)+'.jpg', "wb") as image:
+  print(username)
+  with open('../assets/'+username+'_'+str(myuuid)+'.jpg', "wb") as image:
     image.write(file)
     image.close()
   return {"msg": "SUCCESS"}
