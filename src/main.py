@@ -1,9 +1,14 @@
 # from http.client import HTTPException
+import base64
+from fileinput import filename
 from queue import Empty
 from sqlite3 import DatabaseError
 from sre_constants import SUCCESS
-from fastapi import FastAPI, File, UploadFile, Depends, HTTPException
+from typing import Dict, List
+from fastapi import FastAPI, File, UploadFile, Depends, HTTPException, Response
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.encoders import jsonable_encoder
+from fastapi.responses import JSONResponse, FileResponse
 import uuid
 from auth import AuthHandler
 from face_recog import FaceRecog
@@ -12,6 +17,10 @@ from models import AuthDetails, User
 # from config import config
 from db import Database
 import os
+from PIL import Image
+import io 
+from starlette.responses import StreamingResponse
+import glob
 
 app = FastAPI()
 
@@ -50,6 +59,96 @@ users = []
 #       print('Database connection terminated')
 
 
+@app.get("/api/v1/users")
+async def get_user(username=Depends(auth_handler.auth_wrapper)):
+  users_in_json = []
+  # users = Database.query(f"SELECT * from \"FaceRecog\".users'")
+  users = Database.query(f"SELECT id, first_name, last_name, username, images_count FROM \"FaceRecog\".users")
+  # print(users)
+  for user in users:
+    print(user)
+    user_json = {
+      "id": user[0],
+      "first_name": user[1],
+      "last_name": user[2],
+      "username": user[3],
+      "img_count": user[4]
+    }
+    users_in_json.append(user_json)
+
+  return users_in_json
+
+
+# @app.get("/api/v1/users/{user_id}/images")
+# async def get_user_umages():
+#   images = []
+#   path = "../assets"
+#   valid_images = [".jpg", ".gif", ".png", ".tga"]
+
+#   for f in os.listdir(path):
+#     ext = os.path.splitext(f)[1]
+#     if ext.lower() not in valid_images:
+#         continue
+#     images.append(Image.open(os.path.join(path, f)))
+#   return images
+
+
+@app.get("/api/v1/users/{username}/images")
+async def get_user_umages(username: str):
+  path = "../assets/"
+  images = []
+  images_path = []
+  os.chdir(path)
+  for file in glob.glob(f'{username}_*'):
+    images_path.append(file)
+
+  for image_path in images_path:
+    print(image_path)
+    with open(image_path, "rb") as b_image:
+      stri = base64.b64encode(b_image.read())
+      images.append(
+        {
+          "name":image_path, "image":stri
+        })
+  return images
+
+  # with open(path, "rb") as fim:
+  #   str = base64.b64encode(fim.read())
+  #   images.append(str)
+  # return images
+
+# @app.get("/api/v1/users/{user_id}/images")
+# async def get_user_umages():
+#   test = []
+#   path = "../assets/test.jpg"
+#   file_path = os.path.join(path)
+#   return FileResponse(file_path, media_type="image/jpeg", filename="ttt.jpg")
+
+
+  # users = Database.query(f"SELECT * from \"FaceRecog\".users'")
+  # users = Database.query(
+  #     f"SELECT id, first_name, last_name, username, images_count FROM \"FaceRecog\".users")
+  # # print(users)
+  # for user in users:
+  #   print(user)
+  #   user_json = {
+  #       "id": user[0],
+  #       "first_name": user[1],
+  #       "last_name": user[2],
+  #       "username": user[3],
+  #       "img_count": user[4]
+  #   }
+  #   users_in_json.append(user_json)
+
+  # return users_in_json
+
+  # if (len(users) > 0):
+  #   print(users)
+  #   return users
+
+  # else:
+  #   raise HTTPException(
+  #       status_code=401, detail='Not users in database')
 
 
 @app.post("/api/v1/auth/register", status_code=201)
@@ -107,21 +206,21 @@ async def root():
 @app.post("/api/v1/users/images/check")
 async def check_image(file: bytes = File(...)):
   myuuid = uuid.uuid4()
-  #img.filename = "check.jpg"
-  #contents = await file.read()
+  username = None
   with open('../assets/temp/check.jpg', "wb") as image:
     image.write(file)
     image.close()
   result = FaceRecog.compare_faces('../assets/temp/check.jpg')
   return_result = None
   if result[0] == True:
+    username = result[1].split("_")[0]
     return_result = True
   else:
     return_result = False
 
-  return {"result": return_result}
+  return {"result": return_result, "username": username}
 
-@app.post("/api/v1/users/images/upload")
+@app.post("/api/v1/users/{username}/images/upload")
 # async def upload_image(file: bytes = File(...), username = Depends(auth_handler.auth_wrapper)):
 #   myuuid = uuid.uuid4()
 #   file.filename = "check.jpg"
@@ -130,15 +229,24 @@ async def check_image(file: bytes = File(...)):
 #   image.write(file)
 #   image.close()
 #   return {"msg": "SUCCESS"}
-async def upload_image(file: bytes = File(...), username=Depends(auth_handler.auth_wrapper)):
+async def upload_image(username: str, file: bytes = File(...), usr=Depends(auth_handler.auth_wrapper)):
   myuuid = uuid.uuid4()
   #img.filename = "check.jpg"
   #contents = await file.read()
-  print(username)
+  print({username})
   with open('../assets/'+username+'_'+str(myuuid)+'.jpg', "wb") as image:
     image.write(file)
     image.close()
   return {"msg": "SUCCESS"}
+
+
+@app.delete("/api/v1/users/images/delete/{image_name}")
+async def delete_image(image_name: str, usr=Depends(auth_handler.auth_wrapper)):
+  file_path = f'../assets/{image_name}'
+  os.remove(file_path)
+  return {"msg": "Picture was removed"}
+  
+
 
 # async def upload_image(file: bytes = File(...)):
 #   myuuid = uuid.uuid4()

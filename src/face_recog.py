@@ -21,7 +21,7 @@ class FaceRecog():
                 result = face_recognition.compare_faces([img_encoding], img_encoding2)
                 if(result[0] == True):
                     os.remove(path)
-                    return result
+                    return [result[0], filename]
         return [False]
             
         # cv2.waitKey(0)
