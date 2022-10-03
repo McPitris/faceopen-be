@@ -24,8 +24,6 @@ import glob
 
 app = FastAPI()
 
-app = FastAPI()
-
 origins = ["*"]
 
 app.add_middleware(
