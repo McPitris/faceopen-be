@@ -9,6 +9,7 @@ from models import AuthDetails, User
 from db import Database
 import os
 import glob
+import numpy as np
 
 app = FastAPI()
 
@@ -148,7 +149,7 @@ async def register(user_details: User):
     if len(regist_users) == 0:
         hashed_password = auth_handler.get_password_hash(user_details.password)
         Database.query(
-            f"""INSERT INTO \"FaceRecog\".users 
+            f"""INSERT INTO \"FaceRecog\".users
         (id, first_name, last_name, username, \"password\")
          VALUES('{uuid.uuid4()}','{user_details.first_name}', '{user_details.last_name}', '{user_details.username}', '{hashed_password}')"""
         )
@@ -228,25 +229,37 @@ async def upload_image(username: str, file: bytes = File(...), usr=Depends(auth_
     myuuid = uuid.uuid4()
     #img.filename = "check.jpg"
     # contents = await file.read()
-    image_count = None
-    image_count = Database.query(
+    image_count_tuple = None
+    image_count_tuple = Database.query(
         f"SELECT images_count from \"FaceRecog\".users where users.username='{username}'")
     print({username})
+    print(type(image_count_tuple[0]))
+    image_count = tuple_2_int(image_count_tuple[0])
     print(image_count)
 
 # todo: je potřeba převést image_count[0] tuple na int a v ifu porovnat
-    # if ((image_count[0] == None or int(image_count[0]) < 5)):
-    with open('./assets/'+username+'_'+str(myuuid)+'.jpg', "wb") as image:
-        image.write(file)
-        image.close()
-        tuple_2_int(image_count)
-        #put_query = Database.query(
-            #f"UPDATE \"FaceRecog\".users SET images_count={image_count} WHERE users.username='{username}'")
-        return {"msg": "SUCCESS"}
+    if ((image_count == None or image_count < 5)):
+        with open('./assets/'+username+'_'+str(myuuid)+'.jpg', "wb") as image:
+            image.write(file)
+            image.close()
+        print(image_count)
+        print(username)
+        if (image_count):
+            image_count += 1
+            put_query = Database.query(
+                f"UPDATE \"FaceRecog\".users SET images_count={image_count} WHERE users.username='{username}'")
+        else:
+            put_query = Database.query(
+                f"UPDATE \"FaceRecog\".users SET images_count=1 WHERE users.username='{username}'")
 
+        return {"msg": "SUCCESS"}
+    else:
+        return {"msg": "Maximum images limit reached. Maximum images for user is 5."}
 
 @app.delete("/api/v1/users/images/delete/{image_name}")
+#todo: je potřeba při smazání obrázku decrease číslo v databázi (aktuálně nelze po smazání obárzku přidat další - max 5)
 async def delete_image(image_name: str, usrAuth=Depends(auth_handler.auth_wrapper)):
+    image_count_tuple = None
     file_path = f'./assets/{image_name}'
     os.remove(file_path)
     return {"msg": "Picture was removed"}
@@ -261,16 +274,8 @@ async def delete_image(image_name: str, usrAuth=Depends(auth_handler.auth_wrappe
 #     image.close()
 #   return {"msg": "SUCCESS"}
 def tuple_2_int(tuple):
-    print("The original tuple : " + str(tuple))
-
-    # Convert Tuple to integer
-    res = ""
-    for i in tuple:
-        res += str(i)
-    res = int(res)
-
-# printing result
-    print("Tuple to integer conversion : " + str(res))
+    arr = np.asarray(tuple)
+    return arr[0]
 
 
 @app.get("/api/v1/test")
