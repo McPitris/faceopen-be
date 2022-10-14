@@ -8,8 +8,10 @@ class Database():
         cur = None
         try:
             print('Connecting to postgreSQL database ...')
+            # conn = psycopg2.connect(
+            #     host="localhost", dbname="postgres", user="postgres", password='', port=5432)
             conn = psycopg2.connect(
-                host="localhost", dbname="postgres", user="postgres", password='', port=5432)
+                host="ec2-99-80-170-190.eu-west-1.compute.amazonaws.com", dbname="dctis7jlv0tai8", user="voqtrmzmnzjccv", password='f4d0ea9a47e4ec805a74fe928a4fe76dd669ba55c39115b0cb540bf99e08b3a9', port=5432)
 
             cur = conn.cursor()
             # conn.autocommit = True
