@@ -51,7 +51,7 @@ async def get_user(username=Depends(auth_handler.auth_wrapper)):
     users_in_json = []
     # users = Database.query(f"SELECT * from \"FaceRecog\".users'")
     users = Database.query(
-        f"SELECT id, first_name, last_name, username, images_count FROM \"FaceRecog\".users")
+        f"SELECT id, first_name, last_name, username, images_count FROM \"public\".users")
     # print(users)
     for user in users:
         print(user)
@@ -143,7 +143,7 @@ async def register(user_details: User):
     # print(Database.query('SELECT * from "FaceRecog".users'))
     regist_users = []
     regist_users = Database.query(
-        f"SELECT * from \"FaceRecog\".users where users.username='{user_details.username}'")
+        f"SELECT * from \"public\".users where users.username='{user_details.username}'")
     # print(regist_users)
     if len(regist_users) == 0:
         hashed_password = auth_handler.get_password_hash(user_details.password)
@@ -162,7 +162,7 @@ async def register(user_details: User):
 async def login(auth_details: AuthDetails):
     user = None
     user = Database.query(
-        f"SELECT * from \"FaceRecog\".users where users.username='{auth_details.username}'")
+        f"SELECT * from \"public\".users where users.username='{auth_details.username}'")
     print(user[0][4])
     if (len(user) > 0):
         print("first if")
@@ -230,7 +230,7 @@ async def upload_image(username: str, file: bytes = File(...), usr=Depends(auth_
     # contents = await file.read()
     image_count = None
     image_count = Database.query(
-        f"SELECT images_count from \"FaceRecog\".users where users.username='{username}'")
+        f"SELECT images_count from \"public\".users where users.username='{username}'")
     print({username})
     print(image_count)
 
