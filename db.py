@@ -11,7 +11,7 @@ class Database():
             # conn = psycopg2.connect(
             #     host="localhost", dbname="postgres", user="postgres", password='', port=5432)
             conn = psycopg2.connect(
-                host="ec2-99-80-170-190.eu-west-1.compute.amazonaws.com", dbname="dctis7jlv0tai8", user="voqtrmzmnzjccv", password='f4d0ea9a47e4ec805a74fe928a4fe76dd669ba55c39115b0cb540bf99e08b3a9', port=5432)
+                host="ec2-54-75-184-144.eu-west-1.compute.amazonaws.com", dbname="d93j7108i25c4r", user="uyyeuxzzemwmns", password='ec771a13fbb3aab018ad883ab54a8ac1b3a27dda5d1b6511bfa77b6a1d189f48', port=5432)
 
             cur = conn.cursor()
             # conn.autocommit = True
