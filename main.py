@@ -84,11 +84,12 @@ async def get_user(username=Depends(auth_handler.auth_wrapper)):
 
 @app.get("/api/v1/users/{username}/images")
 async def get_user_umages(username: str, usrAuth=Depends(auth_handler.auth_wrapper)):
-    path = "./</"
+    path = "./assets/"
     images = []
     images_path = []
-    os.chdir(path)
-    for file in glob.glob(f'{username}_*'):
+    # os.chdir(path)
+    # print(os.chdir(path))
+    for file in glob.glob(f'{path}{username}_*'):
         images_path.append(file)
 
     for image_path in images_path:
@@ -164,7 +165,6 @@ async def login(auth_details: AuthDetails):
     user = None
     user = Database.query(
         f"SELECT * from \"FaceRecog\".users where users.username='{auth_details.username}'")
-    print(user[0][4])
     if (len(user) > 0):
         print("first if")
         user = user[0]
@@ -176,9 +176,9 @@ async def login(auth_details: AuthDetails):
                 "accessToken": token
             }
 
-        else:
-            raise HTTPException(
-                status_code=401, detail='Invalid username and/or password')
+    else:
+        raise HTTPException(
+            status_code=401, detail='Invalid username and/or password')
 
 
 @app.get("/api/v1/auth/valid-token")

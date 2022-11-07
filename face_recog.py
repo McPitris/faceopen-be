@@ -8,7 +8,7 @@ class FaceRecog():
         face_locations = face_recognition.face_locations(image)
 
         if (len(face_locations) > 0):
-            print("POZNÁN OBLIČEJ!!!!")
+            print("POZNÁN OBLIČEJ!")
             unknown_picture = face_recognition.load_image_file(path)
             unknown_face_encoding = face_recognition.face_encodings(unknown_picture)[0]
 
@@ -28,5 +28,5 @@ class FaceRecog():
             print("NEROZPOZNÁNO")
             return [False]
         else:
-            print("NEVIDÍM XICHT!")
+            print("NEVIDÍM OBLIČEJ!")
             return [False]
