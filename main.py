@@ -149,14 +149,15 @@ async def register(user_details: User):
     # print(regist_users)
     if len(regist_users) == 0:
         hashed_password = auth_handler.get_password_hash(user_details.password)
-        Database.query(
+        put_query = Database.query(
             f"""INSERT INTO \"FaceRecog\".users
         (id, first_name, last_name, username, \"password\")
          VALUES('{uuid.uuid4()}','{user_details.first_name}', '{user_details.last_name}', '{user_details.username}', '{hashed_password}')"""
         )
-        return {"msg": 'User created'}
+        print(put_query)
+        return {"msg": 'User created', "status_code": 201}
     else:
-        raise HTTPException(
+        return HTTPException(
             status_code=401, detail=f"Username '{regist_users[0][3]}' is already taken")
 
 
@@ -254,15 +255,32 @@ async def upload_image(username: str, file: bytes = File(...), usr=Depends(auth_
 
         return {"msg": "SUCCESS"}
     else:
-        return {"msg": "Maximum images limit reached. Maximum images for user is 5."}
+         raise HTTPException(
+            status_code=422, detail='Maximum images limit reached. Maximum images for user is 5.')
 
-@app.delete("/api/v1/users/images/delete/{image_name}")
+@app.delete("/api/v1/users/images/delete/{username}/{image_name}")
+# http://127.0.0.1:8000/api/v1/users/images/delete/assets/lerenika_b438dbf6-fc71-4387-a68d-046ad71e2d89.jpg
 #todo: je potřeba při smazání obrázku decrease číslo v databázi (aktuálně nelze po smazání obárzku přidat další - max 5)
-async def delete_image(image_name: str, usrAuth=Depends(auth_handler.auth_wrapper)):
+async def delete_image(username: str, image_name: str, usrAuth=Depends(auth_handler.auth_wrapper)):
     image_count_tuple = None
-    file_path = f'./assets/{image_name}'
-    os.remove(file_path)
-    return {"msg": "Picture was removed"}
+    print(image_name)
+    print(username)
+    image_count_tuple = None
+    image_count_tuple = Database.query(
+        f"SELECT images_count from \"FaceRecog\".users where users.username='{username}'")
+    image_count = tuple_2_int(image_count_tuple[0])
+    print(image_count)
+
+    if (image_count > 0):
+        if (image_count):
+            file_path = f'./assets/{image_name}'
+            os.remove(file_path)
+            image_count -= 1
+            Database.query(
+                f"UPDATE \"FaceRecog\".users SET images_count={image_count} WHERE users.username='{username}'")
+        return {"msg": "Picture was removed"}
+    else:
+        return {"msg": "I cant delete it"}
 
 
 # async def upload_image(file: bytes = File(...)):
